@@ -1,5 +1,12 @@
 const herbListDiv = document.getElementById('herbList');
+const resultDiv = document.getElementById('result');
+const burnSound = document.getElementById('burnSound');
+const bgm = document.getElementById('bgm');
+const toggleBGMButton = document.getElementById('toggleBGM');
 
+let recipes = []; // 🔥 這裡儲存來自 Firebase 的配方資料
+
+// 載入藥材列表
 async function loadHerbs() {
   const snapshot = await db.collection("herbs").get();
   snapshot.forEach(doc => {
@@ -10,56 +17,66 @@ async function loadHerbs() {
   });
 }
 
+// 載入配方資料
+async function loadRecipes() {
+  const snapshot = await db.collection("recipes").get();
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    recipes.push({
+      name: data.name,
+      ingredients: data.ingredients.sort(), // 確保排序一致
+    });
+  });
+}
+
+// 主邏輯：煉藥流程
 function simulateAlchemy() {
   const selectedHerbs = Array.from(document.querySelectorAll('.herb-select:checked')).map(el => el.value);
   const fireType = document.getElementById("fireType").value;
 
   if (selectedHerbs.length === 0) {
-    document.getElementById("result").innerText = "請選擇至少一味藥材。";
+    resultDiv.innerText = "請選擇至少一味藥材。";
     return;
   }
 
-  // 🔥 播放燃燒音效
-  const fireAudio = document.getElementById("fireSound");
-  fireAudio.currentTime = 0;
-  fireAudio.play();
-  
-  let resultText = `你使用了「${selectedHerbs.join('、')}」，以「${fireType}」製藥……\n`;
-  const successRate = Math.floor(Math.random() * (99 - 30 + 1)) + 30;
+  burnSound.currentTime = 0;
+  burnSound.play();
 
-  if (successRate > 50) {
-    resultText += `✅ 成功！你煉出了一鍋看起來很不錯的丹藥！（成功率 ${successRate}%）`;
-  } else {
-    resultText += `❌ 煉丹失敗，藥材燒焦了……（成功率 ${successRate}%）`;
-  }
+  // 對照是否有正確配方
+  const sortedSelected = selectedHerbs.slice().sort(); // 排序後比對
+  const matchedRecipe = recipes.find(recipe =>
+    JSON.stringify(recipe.ingredients) === JSON.stringify(sortedSelected)
+  );
 
-  document.getElementById("result").innerText = resultText;
-}
+  let resultText = `你使用了「${selectedHerbs.join('、')}」，以「${fireType}」煉丹……\n`;
 
-loadHerbs();
-
-
-// BGM 播放控制
-let player;
-function onYouTubeIframeAPIReady() {
-  player = new YT.Player('bgmPlayer', {
-    videoId: 'H0nBhA27oDM', // 替換為你的代碼
-    events: {
-      'onReady': event => event.target.setLoop(true)
+  if (matchedRecipe) {
+    const successRate = Math.floor(Math.random() * 70) + 30; // 30~99%
+    if (successRate >= 50) {
+      resultText += `✅ 煉製成功！獲得【${matchedRecipe.name}】（成功率 ${successRate}%）`;
+    } else {
+      resultText += `❌ 火候失當，煉製【${matchedRecipe.name}】失敗！（成功率 ${successRate}%）`;
     }
-  });
-}
-
-function toggleMusic() {
-  if (player && player.getPlayerState() === YT.PlayerState.PLAYING) {
-    player.pauseVideo();
-  } else if (player) {
-    player.playVideo();
+  } else {
+    resultText += `❌ 無效配方！煉出一鍋黑色糊糊……`;
   }
+
+  resultDiv.innerText = resultText;
 }
 
-// 載入初始資料
-window.onload = function () {
-  loadHerbs();
-}
+// 控制 BGM
+toggleBGMButton.addEventListener("click", () => {
+  if (bgm.paused) {
+    bgm.play();
+    toggleBGMButton.innerText = "⏸️ 暫停音樂";
+  } else {
+    bgm.pause();
+    toggleBGMButton.innerText = "🎵 播放音樂";
+  }
+});
 
+// 初始化：載入藥材與配方
+window.addEventListener("DOMContentLoaded", async () => {
+  await loadHerbs();
+  await loadRecipes();
+});
