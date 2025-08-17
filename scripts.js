@@ -79,6 +79,27 @@ const getFireType = ()=> {
   return r ? r.value : null;
 };
 
+const bgm = document.getElementById("bgm");
+const bgmToggle = document.getElementById("bgmToggle");
+
+bgm.volume = 0.6; // 初始音量
+
+// 第一次互動後再播
+bgmToggle.addEventListener("click", async () => {
+  try {
+    if (bgm.paused) {
+      await bgm.play();
+      bgmToggle.textContent = "⏸ 暫停";
+    } else {
+      bgm.pause();
+      bgmToggle.textContent = "🎵 播放";
+    }
+  } catch (e) {
+    console.error("BGM 播放失敗:", e);
+  }
+});
+
+
 function animateCauldron(){
   cauldron.classList.add("boil");
   setTimeout(()=> cauldron.classList.remove("boil"), 900);
@@ -203,3 +224,4 @@ sfxVol.addEventListener("input", ()=>{
     renderHerbs([]);
   }
 })();
+
