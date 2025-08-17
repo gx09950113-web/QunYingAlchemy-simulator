@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <title>煉藥模擬器</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- 預載常用音效 -->
   <link rel="preload" href="assets/sounds/QunYing.mp3" as="audio" type="audio/mpeg" />
   <link rel="stylesheet" href="style.css" />
-  <script type="module" src="scripts.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -24,8 +24,9 @@
         <input id="sfxVol" type="range" min="0" max="1" step="0.01" value="0.8" />
       </div>
 
-      <!-- ✅ 新增：圖鑑按鈕 -->
+      <!-- 圖鑑＋主題切換 -->
       <button id="dexBtn" class="btn-sm">📘 圖鑑</button>
+      <button id="themeToggle" class="btn-sm">🌙 暗色模式</button>
     </div>
   </header>
 
@@ -64,7 +65,7 @@
   <audio id="bgm"         src="assets/sounds/QunYing.mp3" preload="auto" loop playsinline></audio>
   <audio id="burnSound"   src="assets/sounds/fire.mp3" preload="auto" loop></audio>
 
-  <!-- ✅ 新增：圖鑑彈窗 -->
+  <!-- 圖鑑彈窗 -->
   <div id="dexModal" class="modal" hidden>
     <div class="modal__backdrop" data-close></div>
     <div class="modal__panel">
@@ -75,10 +76,13 @@
 
       <div class="modal__tools">
         <input id="dexSearch" type="search" placeholder="搜尋配方或材料…" />
+        <!-- JS 會在這裡動態插入：顯示未解鎖開關 & 進度 -->
       </div>
 
       <div id="dexList" class="dex-list"></div>
     </div>
   </div>
+
+  <script type="module" src="scripts.js"></script>
 </body>
 </html>
