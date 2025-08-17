@@ -1,26 +1,27 @@
 // ==============================
-// 煉藥模擬器 scripts.js（本地 JSON + 圖鑑解鎖版）
+// 煉藥模擬器 scripts.js（本地 JSON + 圖鑑解鎖 + 主題切換）
 // - 讀取：data/herbs.json、data/recipes.json
 // - herbs 支援：["名稱", ...] 或 [{name, emoji?, effects?}, ...]
-// - 規則：藥材任選；配方 & 火候完全符合→成功（良率 30~99%）；否則→一鍋糊糊
-// - 內建：QunYing.mp3 播放/暫停、BGM/SFX 音量、📘 圖鑑（解鎖、搜尋、顯示未解鎖）
+// - 圖鑑：須煉成後才解鎖（localStorage 持久化）
+// - 音量與播放控制、手機/桌面適配 UI、搜尋與顯示未解鎖
 // ==============================
 
 const HERBS_URL   = "data/herbs.json";
 const RECIPES_URL = "data/recipes.json";
+const DEX_KEY     = "QY_dex_discovered_v1";
+const THEME_KEY   = "theme";
 
-const DEX_KEY = "QY_dex_discovered_v1"; // localStorage key
-
-// DOM（等 DOMContentLoaded 後再抓）
+// DOM
 let statusEl, herbBox, resultEl, cauldron, brewBtn, resetBtn;
 let bgm, bgmToggle, bgmVol, sfxVol, burnSound, brewSound, successSfx, failSfx;
 let dexBtn, dexModal, dexClose, dexSearch, dexList, dexTools, dexShowLocked, dexProgress;
+let themeToggle;
 
 // 狀態
 let HERB_LIST = [];        // string[] 或 {name, emoji?, effects?}[]
 let HERB_META = new Map(); // name -> {emoji?, effects?}
 let RECIPES   = [];        // {name, materials:string[], fire, type?}
-let DISCOVERED = new Set(); // 已解鎖配方名稱
+let DISCOVERED = new Set();// 已解鎖配方名稱
 
 // ===== 小工具 =====
 const asSetEq = (a, b) => {
@@ -37,19 +38,14 @@ const setVol = (el, v) => { if (el && typeof el.volume === "number") el.volume =
 async function fetchJSON(url) {
   const abs = new URL(url, window.location.href).toString();
   const res = await fetch(abs, { cache: "no-cache" });
-  if (!res.ok) {
-    const msg = `[${res.status}] ${res.statusText} @ ${abs}`;
-    throw new Error(msg);
-  }
+  if (!res.ok) throw new Error(`[${res.status}] ${res.statusText} @ ${abs}`);
   return res.json();
 }
-
 function unionMaterials(recipes) {
   const s = new Set();
   for (const r of recipes) for (const m of (r.materials || [])) s.add(m);
   return Array.from(s).sort(byStroke);
 }
-
 function buildHerbMeta(herbList) {
   const map = new Map();
   herbList.forEach(item => {
@@ -72,11 +68,9 @@ function saveDiscovered() {
 }
 function unlockRecipe(name) {
   if (!name || DISCOVERED.has(name)) return;
-  // 只解鎖出現在當前配方列表的名稱，避免髒資料
-  if (!RECIPES.some(r => r.name === name)) return;
+  if (!RECIPES.some(r => r.name === name)) return; // 只收錄存在於當前配方的名稱
   DISCOVERED.add(name);
   saveDiscovered();
-  // 若圖鑑開著就即時更新
   if (dexModal && !dexModal.hidden) renderDexUI();
 }
 
@@ -110,16 +104,12 @@ function renderHerbs(list) {
     herbBox.appendChild(label);
   });
 }
-
-// ===== UI：取得選擇 =====
 const getSelectedHerbs = () =>
   Array.from(document.querySelectorAll('input[name="herbs"]:checked')).map(x => x.value);
-
 const getFireType = () => {
   const r = document.querySelector('input[name="fire"]:checked');
   return r ? r.value : null;
 };
-
 function animateCauldron() {
   cauldron.classList.add("boil");
   setTimeout(() => cauldron.classList.remove("boil"), 900);
@@ -131,13 +121,10 @@ function play(el, vol) {
 // ===== 圖鑑（Dex）=====
 function openDex() { if (dexModal) { dexModal.hidden = false; dexSearch?.focus(); renderDexUI(); } }
 function closeDex() { if (dexModal) { dexModal.hidden = true; if (dexSearch) dexSearch.value = ""; } }
-
 function materialLabel(name) {
   const meta = HERB_META.get(name) || {};
   return `${meta.emoji ? meta.emoji + " " : ""}${name}`;
 }
-
-// 建立/更新圖鑑工具列（顯示未解鎖 + 進度）
 function ensureDexTools() {
   if (!dexTools) return;
   // 顯示未解鎖 checkbox
@@ -166,39 +153,30 @@ function ensureDexTools() {
     dexProgress = span;
   }
 }
-
 function calcProgress() {
   const total = RECIPES.length;
   const got = Array.from(DISCOVERED).filter(n => RECIPES.some(r => r.name === n)).length;
   return { got, total };
 }
-
 function renderDexUI() {
   ensureDexTools();
   const showLocked = !!dexShowLocked?.checked;
   const kw = (dexSearch?.value || "").trim();
 
-  // 分成已解鎖/未解鎖清單
   const unlocked = RECIPES.filter(r => DISCOVERED.has(r.name));
   const locked   = RECIPES.filter(r => !DISCOVERED.has(r.name));
+  const list = showLocked ? [...unlocked, ...locked] : unlocked;
 
-  const list = showLocked
-    ? [...unlocked, ...locked]
-    : unlocked;
-
-  // 搜尋（針對顯示清單）
   const filtered = kw
     ? list.filter(r => r.name.includes(kw) || r.materials.some(m => m.includes(kw)))
     : list;
 
-  // 渲染
   if (!filtered.length) {
     dexList.innerHTML = `<div class="hint">（無符合的配方）</div>`;
   } else {
     dexList.innerHTML = filtered.map(r => {
       const isLocked = !DISCOVERED.has(r.name);
       if (isLocked) {
-        // 鎖住顯示
         return `
           <div class="dex-card dex-card--locked">
             <p class="dex-title">？？？ <span class="muted">（未解鎖）</span></p>
@@ -206,7 +184,6 @@ function renderDexUI() {
           </div>
         `;
       }
-      // 已解鎖顯示
       const chips = r.materials.map(materialLabel).map(x => `<span class="dex-chip">${x}</span>`).join("");
       return `
         <div class="dex-card">
@@ -217,15 +194,10 @@ function renderDexUI() {
     }).join("");
   }
 
-  // 進度
   const { got, total } = calcProgress();
   if (dexProgress) dexProgress.textContent = `已解鎖 ${got} / ${total}`;
 }
-
-function renderDex(recipes, keyword = "") {
-  // 舊的函式保留相容；現在統一由 renderDexUI 控制
-  renderDexUI();
-}
+function renderDex() { renderDexUI(); } // 相容舊函式名
 
 // ===== 煉藥主流程 =====
 function brewOnce() {
@@ -259,8 +231,21 @@ function brewOnce() {
   `;
   play(successSfx, Number(sfxVol?.value || 0.8));
 
-  // ✅ 解鎖圖鑑
+  // 解鎖圖鑑
   unlockRecipe(matched.name);
+}
+
+// ===== 主題切換 =====
+function applyTheme(dark) {
+  if (dark) {
+    document.documentElement.classList.add("dark");
+    if (themeToggle) themeToggle.textContent = "☀️ 亮色模式";
+    localStorage.setItem(THEME_KEY, "dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+    if (themeToggle) themeToggle.textContent = "🌙 暗色模式";
+    localStorage.setItem(THEME_KEY, "light");
+  }
 }
 
 // ===== 啟動流程 =====
@@ -282,24 +267,22 @@ async function boot() {
     HERB_LIST = herbs;
     HERB_META = buildHerbMeta(HERB_LIST);
 
-    // 載入已解鎖清單並檢查有效性（只保留當前配方中存在者）
+    // 圖鑑已解鎖清單
     DISCOVERED = loadDiscovered();
     const validNames = new Set(RECIPES.map(r => r.name));
     DISCOVERED = new Set(Array.from(DISCOVERED).filter(n => validNames.has(n)));
-    saveDiscovered(); // 清掉無效條目
+    saveDiscovered();
 
     renderHerbs(HERB_LIST);
     renderDexUI();
 
-    // 安全設定音量
+    // 音量
     const sfx = Number(sfxVol?.value || 0.8);
     setVol(brewSound,  sfx);
     setVol(successSfx, sfx);
     setVol(failSfx,    sfx);
     setVol(burnSound,  0.6);
-
-    const bgmv = Number(bgmVol?.value || 0.6);
-    setVol(bgm, bgmv);
+    setVol(bgm, Number(bgmVol?.value || 0.6));
 
     if (statusEl) {
       const { got, total } = calcProgress();
@@ -310,7 +293,7 @@ async function boot() {
     console.error(e);
     if (statusEl) {
       statusEl.innerHTML = `❌ 無法讀取本地 JSON。<br><small>${e?.message || e}</small><br>
-      提示：請用本地伺服器（Live Server / python -m http.server）、確認 /data/*.json 路徑與 JSON 格式。`;
+      提示：請用本地伺服器（Live Server / python -m http.server），確認 /data/*.json 路徑與 JSON 格式。`;
       statusEl.classList.add("bad");
     }
     renderHerbs([]);
@@ -319,7 +302,7 @@ async function boot() {
 
 // ===== 綁定：在 DOM 準備好後 =====
 window.addEventListener("DOMContentLoaded", () => {
-  // 取得 DOM
+  // 抓 DOM
   statusEl   = document.getElementById("status");
   herbBox    = document.getElementById("herbContainer");
   resultEl   = document.getElementById("result");
@@ -341,9 +324,11 @@ window.addEventListener("DOMContentLoaded", () => {
   dexClose   = document.getElementById("dexClose");
   dexSearch  = document.getElementById("dexSearch");
   dexList    = document.getElementById("dexList");
-  dexTools   = document.querySelector(".modal__tools"); // 直接掛在現有工具列裡
+  dexTools   = document.querySelector(".modal__tools");
 
-  // 動態建立工具列 UI（顯示未解鎖、進度）
+  themeToggle = document.getElementById("themeToggle");
+
+  // 圖鑑工具列元件
   ensureDexTools();
 
   // 事件：煉藥／重置
@@ -355,7 +340,7 @@ window.addEventListener("DOMContentLoaded", () => {
     try { burnSound?.pause(); if (burnSound) burnSound.currentTime = 0; } catch {}
   });
 
-  // 事件：BGM 控制
+  // BGM 控制
   bgmToggle?.addEventListener("click", async () => {
     if (!bgm) return;
     try {
@@ -386,6 +371,19 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.target && e.target.getAttribute("data-close") !== null) closeDex();
   });
   dexSearch?.addEventListener("input", renderDexUI);
+
+  // 主題切換
+  const savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme) {
+    applyTheme(savedTheme === "dark");
+  } else {
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    applyTheme(prefersDark);
+  }
+  themeToggle?.addEventListener("click", () => {
+    const isDark = document.documentElement.classList.contains("dark");
+    applyTheme(!isDark);
+  });
 
   // 啟動
   boot();
