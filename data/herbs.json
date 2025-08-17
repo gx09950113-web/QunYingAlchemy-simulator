@@ -1,5 +1,5 @@
 [
-{"name": "凝血草", "emoji": "🌿", "effects": "根部含有強效的止血成分"},
+  {"name": "凝血草", "emoji": "🌿", "effects": "根部含有強效的止血成分"},
   {"name": "水", "emoji": "💧", "effects": "常用溶劑，調和藥性"},
   {"name": "薄荷", "emoji": "🌿", "effects": "清涼、通竅，化濁醒神"},
   {"name": "蜂蜜", "emoji": "🍯", "effects": "潤燥、調和諸藥，具黏合作用"},
@@ -22,9 +22,9 @@
   {"name": "石菖蒲", "emoji": "💠", "effects": "開竅化濁，寧神益智"},
   {"name": "柏子仁", "emoji": "💠", "effects": "養心安神，潤腸通便"},
   {"name": "甘草", "emoji": "🌿", "effects": "補脾益氣，緩急止痛，調和諸藥"},
-  {"name": "幽蓮子", "emoji": "💠", "effects": "安神寧心，潛意定魂"},
-  {"name": "靜心草", "emoji": "🌿", "effects": "寧神定志，鎮靜心神"},
-  {"name": "寒霜粉", "emoji": "💠", "effects": "清熱安神，驅寒凝魄"},
+  {"name": "幽蓮子", "emoji": "💠", "effects": "毒"},
+  {"name": "靜心草", "emoji": "🌿", "effects": "引毒"},
+  {"name": "寒霜粉", "emoji": "💠", "effects": "引毒？"},
   {"name": "青露液", "emoji": "💠", "effects": "清心養神，冷凝精氣"},
   {"name": "白芍", "emoji": "💠", "effects": "養血斂陰，柔肝止痛"},
   {"name": "玫瑰花瓣", "emoji": "🌹", "effects": "理氣解鬱，活血散瘀"},
@@ -53,7 +53,6 @@
   {"name": "黃芩", "emoji": "💠", "effects": "清熱燥濕，瀉火解毒"},
   {"name": "黃柏", "emoji": "💠", "effects": "清熱燥濕，瀉火除蒸"},
   {"name": "梔子", "emoji": "💠", "effects": "清熱瀉火，除煩利濕"},
-  {"name": "黃耆", "emoji": "💠", "effects": "補氣升陽，固表止汗"}
-  {"name": "鎮魂草", "emoji": "🌿", "effects": "安定神魂，補氣養神"},
+  {"name": "黃耆", "emoji": "💠", "effects": "補氣升陽，固表止汗"},
+  {"name": "鎮魂草", "emoji": "🌿", "effects": "安定神魂，補氣養神"}
 ]
-
