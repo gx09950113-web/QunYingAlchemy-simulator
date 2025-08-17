@@ -1,4 +1,5 @@
- {"name": "凝血草", "emoji": "🌿", "effects": "根部含有強效的止血成分"},
+[
+{"name": "凝血草", "emoji": "🌿", "effects": "根部含有強效的止血成分"},
   {"name": "水", "emoji": "💧", "effects": "常用溶劑，調和藥性"},
   {"name": "薄荷", "emoji": "🌿", "effects": "清涼、通竅，化濁醒神"},
   {"name": "蜂蜜", "emoji": "🍯", "effects": "潤燥、調和諸藥，具黏合作用"},
@@ -53,5 +54,6 @@
   {"name": "黃柏", "emoji": "💠", "effects": "清熱燥濕，瀉火除蒸"},
   {"name": "梔子", "emoji": "💠", "effects": "清熱瀉火，除煩利濕"},
   {"name": "黃耆", "emoji": "💠", "effects": "補氣升陽，固表止汗"}
-  {"name": "鎮魂草", "emoji": "🌿", "effects": "安定神魂，補氣養神"}
+  {"name": "鎮魂草", "emoji": "🌿", "effects": "安定神魂，補氣養神"},
+]
 
