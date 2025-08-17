@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>煉藥模擬器</title>
+  <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    // 🔥 Firebase 設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyBEgS2lZYqSrr1FV5X0EzfrRQq_C4D1-Tc",
+      authDomain: "alchemygame-37ea5.firebaseapp.com",
+      projectId: "alchemygame-37ea5",
+      storageBucket: "alchemygame-37ea5.appspot.com",
+      messagingSenderId: "149160496683",
+      appId: "1:149160496683:web:2ef9826985a4bd3f1c646e",
+      measurementId: "G-59PLBST54N"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    .herb-select {
+      margin: 5px 0;
+    }
+    #player {
+      display: none; /* 隱藏播放器畫面 */
+    }
+    #musicControl {
+      margin-top: 20px;
+      padding: 6px 12px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔥 煉藥模擬器</h1>
+
+  <!-- 🎵 YouTube 音樂播放器（隱藏） -->
+  <div id="player"></div>
+  <button id="musicControl">⏸ 暫停背景音樂</button>
+
+  <div>
+    <h3>🔍 選擇藥材：</h3>
+    <div id="herbList"></div>
+  </div>
+
+  <div>
+    <h3>🔥 火候選擇：</h3>
+    <select id="fireType">
+      <option>小火</option>
+      <option>中火</option>
+      <option>大火</option>
+      <option>免用火</option>
+    </select>
+  </div>
+
+  <button onclick="simulateAlchemy()">開始煉藥</button>
+
+  <h3>📦 煉藥結果：</h3>
+  <div id="result"></div>
+
+  <script>
+    const herbListDiv = document.getElementById('herbList');
+
+    async function loadHerbs() {
+      const snapshot = await db.collection("herbs").get();
+      snapshot.forEach(doc => {
+        const herb = doc.data();
+        const label = document.createElement("label");
+        label.innerHTML = `<input type="checkbox" value="${herb.name}" class="herb-select"> ${herb.name}<br>`;
+        herbListDiv.appendChild(label);
+      });
+    }
+
+    function simulateAlchemy() {
+      const selectedHerbs = Array.from(document.querySelectorAll('.herb-select:checked')).map(el => el.value);
+      const fireType = document.getElementById("fireType").value;
+
+      if (selectedHerbs.length === 0) {
+        document.getElementById("result").innerText = "請選擇至少一味藥材。";
+        return;
+      }
+
+      let resultText = `你使用了「${selectedHerbs.join('、')}」，以「${fireType}」煉丹……\n`;
+      const successRate = Math.floor(Math.random() * 100);
+
+      if (successRate > 50) {
+        resultText += `✅ 成功！你煉出了一鍋看起來很不錯的丹藥！（成功率 ${successRate}%）`;
+      } else {
+        resultText += `❌ 煉丹失敗，藥材燒焦了……（成功率 ${successRate}%）`;
+      }
+
+      document.getElementById("result").innerText = resultText;
+    }
+
+    loadHerbs();
+
+    // 🎵 YouTube 背景音樂播放器邏輯
+    let player;
+    let isPlaying = true;
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        videoId: 'H0nBhA27oDM', // ← 改成你想用的 YouTube 影片 ID
+        playerVars: {
+          autoplay: 1,
+          loop: 1,
+          playlist: 'H0nBhA27oDM',
+          controls: 0,
+          showinfo: 0,
+          modestbranding: 1,
+          rel: 0
+        },
+        events: {
+          'onReady': function (event) {
+            event.target.mute(); // 為了自動播放，預設靜音
+            event.target.playVideo();
+          }
+        }
+      });
+    }
+
+    document.getElementById("musicControl").addEventListener("click", function () {
+      if (isPlaying) {
+        player.pauseVideo();
+        this.innerText = "▶️ 播放背景音樂";
+      } else {
+        player.playVideo();
+        this.innerText = "⏸ 暫停背景音樂";
+      }
+      isPlaying = !isPlaying;
+    });
+  </script>
+</body>
+</html>
