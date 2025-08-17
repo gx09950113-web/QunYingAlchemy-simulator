@@ -1,23 +1,26 @@
 // ==============================
-// 煉藥模擬器 scripts.js（本地 JSON 版）
+// 煉藥模擬器 scripts.js（本地 JSON + 圖鑑解鎖版）
 // - 讀取：data/herbs.json、data/recipes.json
 // - herbs 支援：["名稱", ...] 或 [{name, emoji?, effects?}, ...]
 // - 規則：藥材任選；配方 & 火候完全符合→成功（良率 30~99%）；否則→一鍋糊糊
-// - 內建：QunYing.mp3 播放/暫停、BGM/SFX 音量、📘 圖鑑（含搜尋）
+// - 內建：QunYing.mp3 播放/暫停、BGM/SFX 音量、📘 圖鑑（解鎖、搜尋、顯示未解鎖）
 // ==============================
 
 const HERBS_URL   = "data/herbs.json";
 const RECIPES_URL = "data/recipes.json";
 
-// DOM（等 DOMContentLoaded 後再抓更保險；但先宣告容器）
+const DEX_KEY = "QY_dex_discovered_v1"; // localStorage key
+
+// DOM（等 DOMContentLoaded 後再抓）
 let statusEl, herbBox, resultEl, cauldron, brewBtn, resetBtn;
 let bgm, bgmToggle, bgmVol, sfxVol, burnSound, brewSound, successSfx, failSfx;
-let dexBtn, dexModal, dexClose, dexSearch, dexList;
+let dexBtn, dexModal, dexClose, dexSearch, dexList, dexTools, dexShowLocked, dexProgress;
 
 // 狀態
 let HERB_LIST = [];        // string[] 或 {name, emoji?, effects?}[]
 let HERB_META = new Map(); // name -> {emoji?, effects?}
 let RECIPES   = [];        // {name, materials:string[], fire, type?}
+let DISCOVERED = new Set(); // 已解鎖配方名稱
 
 // ===== 小工具 =====
 const asSetEq = (a, b) => {
@@ -54,6 +57,27 @@ function buildHerbMeta(herbList) {
     else if (item && item.name) map.set(item.name, { emoji: item.emoji || "", effects: item.effects || "" });
   });
   return map;
+}
+
+// ===== 圖鑑解鎖持久化 =====
+function loadDiscovered() {
+  try {
+    const raw = localStorage.getItem(DEX_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch { return new Set(); }
+}
+function saveDiscovered() {
+  try { localStorage.setItem(DEX_KEY, JSON.stringify(Array.from(DISCOVERED))); } catch {}
+}
+function unlockRecipe(name) {
+  if (!name || DISCOVERED.has(name)) return;
+  // 只解鎖出現在當前配方列表的名稱，避免髒資料
+  if (!RECIPES.some(r => r.name === name)) return;
+  DISCOVERED.add(name);
+  saveDiscovered();
+  // 若圖鑑開著就即時更新
+  if (dexModal && !dexModal.hidden) renderDexUI();
 }
 
 // ===== UI：藥材渲染 =====
@@ -105,37 +129,102 @@ function play(el, vol) {
 }
 
 // ===== 圖鑑（Dex）=====
-function openDex() { if (dexModal) { dexModal.hidden = false; dexSearch?.focus(); } }
-function closeDex() { if (dexModal) { dexModal.hidden = true; if (dexSearch) dexSearch.value = ""; renderDex(RECIPES); } }
+function openDex() { if (dexModal) { dexModal.hidden = false; dexSearch?.focus(); renderDexUI(); } }
+function closeDex() { if (dexModal) { dexModal.hidden = true; if (dexSearch) dexSearch.value = ""; } }
 
 function materialLabel(name) {
   const meta = HERB_META.get(name) || {};
   return `${meta.emoji ? meta.emoji + " " : ""}${name}`;
 }
 
-function renderDex(recipes, keyword = "") {
-  if (!dexList) return;
-  const kw = keyword.trim();
-  const list = kw
-    ? recipes.filter(r =>
-        r.name.includes(kw) || r.materials.some(m => m.includes(kw))
-      )
-    : recipes;
+// 建立/更新圖鑑工具列（顯示未解鎖 + 進度）
+function ensureDexTools() {
+  if (!dexTools) return;
+  // 顯示未解鎖 checkbox
+  if (!dexShowLocked) {
+    const wrap = document.createElement("label");
+    wrap.style.display = "inline-flex";
+    wrap.style.alignItems = "center";
+    wrap.style.gap = "6px";
+    wrap.style.whiteSpace = "nowrap";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.id = "dexShowLocked";
+    wrap.appendChild(cb);
+    wrap.appendChild(document.createTextNode(" 顯示未解鎖"));
+    dexTools.appendChild(wrap);
+    dexShowLocked = cb;
+    dexShowLocked.addEventListener("change", renderDexUI);
+  }
+  // 進度顯示
+  if (!dexProgress) {
+    const span = document.createElement("span");
+    span.id = "dexProgress";
+    span.className = "muted";
+    span.style.marginLeft = "auto";
+    dexTools.appendChild(span);
+    dexProgress = span;
+  }
+}
 
-  if (!list.length) {
+function calcProgress() {
+  const total = RECIPES.length;
+  const got = Array.from(DISCOVERED).filter(n => RECIPES.some(r => r.name === n)).length;
+  return { got, total };
+}
+
+function renderDexUI() {
+  ensureDexTools();
+  const showLocked = !!dexShowLocked?.checked;
+  const kw = (dexSearch?.value || "").trim();
+
+  // 分成已解鎖/未解鎖清單
+  const unlocked = RECIPES.filter(r => DISCOVERED.has(r.name));
+  const locked   = RECIPES.filter(r => !DISCOVERED.has(r.name));
+
+  const list = showLocked
+    ? [...unlocked, ...locked]
+    : unlocked;
+
+  // 搜尋（針對顯示清單）
+  const filtered = kw
+    ? list.filter(r => r.name.includes(kw) || r.materials.some(m => m.includes(kw)))
+    : list;
+
+  // 渲染
+  if (!filtered.length) {
     dexList.innerHTML = `<div class="hint">（無符合的配方）</div>`;
-    return;
+  } else {
+    dexList.innerHTML = filtered.map(r => {
+      const isLocked = !DISCOVERED.has(r.name);
+      if (isLocked) {
+        // 鎖住顯示
+        return `
+          <div class="dex-card dex-card--locked">
+            <p class="dex-title">？？？ <span class="muted">（未解鎖）</span></p>
+            <div class="dex-mats"><span class="dex-chip">？？？ × ${r.materials.length}</span></div>
+          </div>
+        `;
+      }
+      // 已解鎖顯示
+      const chips = r.materials.map(materialLabel).map(x => `<span class="dex-chip">${x}</span>`).join("");
+      return `
+        <div class="dex-card">
+          <p class="dex-title">${r.name}${r.type ? `（${r.type}）` : ""} — <span class="muted">${r.fire}</span></p>
+          <div class="dex-mats">${chips}</div>
+        </div>
+      `;
+    }).join("");
   }
 
-  dexList.innerHTML = list.map(r => {
-    const chips = r.materials.map(materialLabel).map(x => `<span class="dex-chip">${x}</span>`).join("");
-    return `
-      <div class="dex-card">
-        <p class="dex-title">${r.name}${r.type ? `（${r.type}）` : ""} — <span class="muted">${r.fire}</span></p>
-        <div class="dex-mats">${chips}</div>
-      </div>
-    `;
-  }).join("");
+  // 進度
+  const { got, total } = calcProgress();
+  if (dexProgress) dexProgress.textContent = `已解鎖 ${got} / ${total}`;
+}
+
+function renderDex(recipes, keyword = "") {
+  // 舊的函式保留相容；現在統一由 renderDexUI 控制
+  renderDexUI();
 }
 
 // ===== 煉藥主流程 =====
@@ -169,6 +258,9 @@ function brewOnce() {
     <p>本次良率：<strong>${yieldPct}%</strong></p>
   `;
   play(successSfx, Number(sfxVol?.value || 0.8));
+
+  // ✅ 解鎖圖鑑
+  unlockRecipe(matched.name);
 }
 
 // ===== 啟動流程 =====
@@ -190,8 +282,14 @@ async function boot() {
     HERB_LIST = herbs;
     HERB_META = buildHerbMeta(HERB_LIST);
 
+    // 載入已解鎖清單並檢查有效性（只保留當前配方中存在者）
+    DISCOVERED = loadDiscovered();
+    const validNames = new Set(RECIPES.map(r => r.name));
+    DISCOVERED = new Set(Array.from(DISCOVERED).filter(n => validNames.has(n)));
+    saveDiscovered(); // 清掉無效條目
+
     renderHerbs(HERB_LIST);
-    renderDex(RECIPES);
+    renderDexUI();
 
     // 安全設定音量
     const sfx = Number(sfxVol?.value || 0.8);
@@ -204,7 +302,8 @@ async function boot() {
     setVol(bgm, bgmv);
 
     if (statusEl) {
-      statusEl.textContent = `已載入（${source}）：配方 ${RECIPES.length}、藥材 ${Array.from(HERB_META.keys()).length}`;
+      const { got, total } = calcProgress();
+      statusEl.textContent = `已載入（${source}）：配方 ${RECIPES.length}、藥材 ${Array.from(HERB_META.keys()).length}｜圖鑑 ${got}/${total}`;
       statusEl.classList.add("ok");
     }
   } catch (e) {
@@ -242,6 +341,10 @@ window.addEventListener("DOMContentLoaded", () => {
   dexClose   = document.getElementById("dexClose");
   dexSearch  = document.getElementById("dexSearch");
   dexList    = document.getElementById("dexList");
+  dexTools   = document.querySelector(".modal__tools"); // 直接掛在現有工具列裡
+
+  // 動態建立工具列 UI（顯示未解鎖、進度）
+  ensureDexTools();
 
   // 事件：煉藥／重置
   brewBtn?.addEventListener("click", brewOnce);
@@ -252,7 +355,7 @@ window.addEventListener("DOMContentLoaded", () => {
     try { burnSound?.pause(); if (burnSound) burnSound.currentTime = 0; } catch {}
   });
 
-  // 事件：BGM 控制（手動播放/暫停，符合自動播放政策）
+  // 事件：BGM 控制
   bgmToggle?.addEventListener("click", async () => {
     if (!bgm) return;
     try {
@@ -276,13 +379,13 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // 事件：圖鑑
+  // 圖鑑事件
   dexBtn?.addEventListener("click", openDex);
   dexClose?.addEventListener("click", closeDex);
   dexModal?.addEventListener("click", (e) => {
     if (e.target && e.target.getAttribute("data-close") !== null) closeDex();
   });
-  dexSearch?.addEventListener("input", () => renderDex(RECIPES, dexSearch.value));
+  dexSearch?.addEventListener("input", renderDexUI);
 
   // 啟動
   boot();
