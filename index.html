@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>煉藥模擬器</title>
-
-  <!-- 引入外部 CSS -->
-  <link rel="stylesheet" href="style.css">
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js"></script>
+
+  <!-- 自訂檔案 -->
+  <link rel="stylesheet" href="style.css" />
+  <script defer src="scripts.js"></script>
+
+  <!-- Firebase 初始化 -->
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBEgS2lZYqSrr1FV5X0EzfrRQq_C4D1-Tc",
@@ -25,22 +29,21 @@
   </script>
 </head>
 <body>
-
-  <!-- 鍋子圖示 -->
-  <div class="cauldron-container">
-    <img src="assets/images/cauldron.png" alt="煉藥鍋子">
+  <!-- 登入連結 -->
+  <div id="login-link">
+    <a href="auth/login.html">🔐 登入</a>
   </div>
 
   <h1>🔥 煉藥模擬器</h1>
 
   <!-- 藥材選擇 -->
-  <div>
+  <section>
     <h3>🔍 選擇藥材：</h3>
     <div id="herbList"></div>
-  </div>
+  </section>
 
   <!-- 火候選擇 -->
-  <div>
+  <section>
     <h3>🔥 火候選擇：</h3>
     <select id="fireType">
       <option>小火</option>
@@ -48,21 +51,25 @@
       <option>大火</option>
       <option>免用火</option>
     </select>
-  </div>
+  </section>
 
-  <!-- 煉丹按鈕 -->
+  <!-- 操作按鈕 -->
   <button onclick="simulateAlchemy()">開始煉藥</button>
 
-<audio id="fireSound" src="assets/sounds/fire.mp3" preload="auto"></audio>
-
-  
   <!-- 結果顯示 -->
   <h3>📦 煉藥結果：</h3>
   <div id="result"></div>
 
-  <!-- 主邏輯 script -->
-  <script src="scripts.js"></script>
+  <!-- 鍋子圖片 -->
+  <img src="assets/images/cauldron.png" alt="煉藥鍋" id="cauldron" />
 
+  <!-- 音樂控制 -->
+  <div class="bgm-control">
+    <button id="toggleBGM">🎵 播放音樂</button>
+  </div>
+
+  <!-- 聲音效果 -->
+  <audio id="burnSound" src="assets/sounds/fire_crackling.mp3" preload="auto"></audio>
+  <audio id="bgm" src="assets/sounds/QunYing.mp3" preload="auto" loop></audio>
 </body>
 </html>
-
