@@ -1,0 +1,24 @@
+body {
+  font-family: sans-serif;
+  padding: 20px;
+  background-color: #f8f8f8;
+}
+
+/* 鍋子圖示樣式 */
+.cauldron-container {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.cauldron-container img {
+  width: 200px;
+  max-width: 80%;
+  animation: float 3s ease-in-out infinite;
+}
+
+/* 漂浮動畫 */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
