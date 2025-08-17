@@ -19,7 +19,12 @@ function simulateAlchemy() {
     return;
   }
 
-  let resultText = `你使用了「${selectedHerbs.join('、')}」，以「${fireType}」煉丹……\n`;
+  // 🔥 播放燃燒音效
+  const fireAudio = document.getElementById("fireSound");
+  fireAudio.currentTime = 0;
+  fireAudio.play();
+  
+  let resultText = `你使用了「${selectedHerbs.join('、')}」，以「${fireType}」製藥……\n`;
   const successRate = Math.floor(Math.random() * (99 - 30 + 1)) + 30;
 
   if (successRate > 50) {
@@ -57,3 +62,4 @@ function toggleMusic() {
 window.onload = function () {
   loadHerbs();
 }
+
