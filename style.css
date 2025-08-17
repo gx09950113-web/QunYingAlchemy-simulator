@@ -1,92 +1,168 @@
 /* ================================
-   📘 圖鑑彈窗美化（貼到 style.css 末尾）
+   基礎
    ================================ */
-
-.modal{position:fixed; inset:0; z-index:50; display:block}
-.modal[hidden]{display:none}
-
-/* 背景：柔和漸層＋毛玻璃 */
-.modal__backdrop{
-  position:absolute; inset:0; cursor:pointer;
-  background: radial-gradient(80% 60% at 50% 40%, rgba(255,235,238,.6), rgba(0,0,0,.35));
-  backdrop-filter: blur(4px) saturate(1.05);
-  animation: fadeIn .25s ease both;
+:root{
+  --bg:#faf7f8;
+  --card:#ffffff;
+  --text:#222222;
+  --muted:#6b7280;
+  --brand:#cf5a67; /* 粉紅紅 */
+  --border:#e5e7eb;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",PingFangTC,"Noto Sans CJK TC",Roboto,"Helvetica Neue",Arial,"Microsoft JhengHei",sans-serif;
+  color:var(--text); background:var(--bg); line-height:1.6;
 }
 
-/* 主面板：玻璃卡片 */
-.modal__panel{
-  position:relative; margin:6vh auto 0; width:min(960px,94vw);
-  background: rgba(255,255,255,.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(0,0,0,.06);
-  border-radius: 16px;
-  box-shadow: 0 20px 50px rgba(0,0,0,.25);
-  padding: 14px 16px;
-  animation: slideUp .25s ease both;
+/* ================================
+   頂部與音量面板
+   ================================ */
+.topbar{
+  position:sticky; top:0; z-index:10;
+  display:flex; align-items:center; gap:12px; justify-content:space-between;
+  padding:10px 14px; background:rgba(255,255,255,.92); backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border);
 }
+.topbar h1{font-size:1.2rem; margin:0}
+.audio-panel{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+.vol-group{display:flex; align-items:center; gap:8px}
+.vol-group input[type="range"]{width:120px}
 
-@keyframes fadeIn { from{opacity:0} to{opacity:1} }
-@keyframes slideUp { from{transform:translateY(8px);opacity:0} to{transform:translateY(0);opacity:1} }
-
-/* 頂部區域 */
-.modal__head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px}
-.modal__head h3{margin:0; font-size:1.25rem}
-
-/* 小按鈕樣式（用在 BGM/關閉/圖鑑） */
 .btn-sm{
-  padding:6px 10px; border-radius:10px; border:1px solid #e5e7eb;
-  background:#fff; color:#222; cursor:pointer;
-  box-shadow:0 1px 2px rgba(0,0,0,.06); transition:transform .12s ease, box-shadow .12s ease, filter .12s ease
+  padding:8px 12px; border-radius:10px; border:1px solid var(--border);
+  background:#fff; color:var(--text); cursor:pointer;
+  box-shadow:0 1px 2px rgba(0,0,0,.06); transition:transform .12s ease, box-shadow .12s ease
 }
 .btn-sm:hover{ transform:translateY(-1px); box-shadow:0 6px 14px rgba(0,0,0,.08) }
 .btn-sm:active{ transform:none; box-shadow:0 1px 2px rgba(0,0,0,.06) }
 .btn-sm:focus-visible{ outline: none; box-shadow:0 0 0 4px rgba(201,70,85,.18) }
 
-/* 工具列：搜尋框 */
-.modal__tools{display:flex; gap:10px; margin:8px 0 12px}
+/* ================================
+   主要區塊
+   ================================ */
+main{max-width:980px; margin:12px auto; padding:0 14px}
+h2{font-size:1.05rem; margin:18px 0 8px}
+.status{
+  padding:8px 10px; border:1px dashed var(--border); border-radius:10px; background:#fff; color:var(--muted)
+}
+.status.ok{border-style:solid; color:#1f6b3a; background:#eefaf2; border-color:#bfe8cd}
+.status.bad{border-style:solid; color:#7a1e24; background:#fff1f2; border-color:#f5c2c7}
+.hint{color:var(--muted); font-size:.95rem}
+
+/* 藥材網格 */
+.grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+}
+@media (min-width: 680px){ .grid{ grid-template-columns:1fr 1fr 1fr } }
+.herb{
+  display:block; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:var(--card);
+  box-shadow:0 1px 2px rgba(0,0,0,.03)
+}
+.herb input{margin-right:6px}
+.herb .effects{display:block; color:var(--muted); font-size:.9em; margin-left:24px; margin-top:2px}
+
+/* 按鈕列 */
+.actions{display:flex; gap:10px; align-items:center; margin:12px 0}
+.actions button{
+  padding:10px 14px; border:none; border-radius:12px; background:var(--brand); color:#fff; cursor:pointer;
+  box-shadow:0 6px 14px rgba(207,90,103,.25)
+}
+.actions .ghost{
+  background:#fff; color:var(--text); border:1px solid var(--border); box-shadow:none;
+}
+
+/* 結果卡片 */
+.card{
+  background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px;
+  box-shadow:0 2px 6px rgba(0,0,0,.06)
+}
+
+/* 煉藥鍋與動畫 */
+#cauldron{display:block; width:min(220px, 40vw); margin:16px auto}
+@keyframes boilK {0%{transform:translateY(0)} 50%{transform:translateY(-3px)} 100%{transform:translateY(0)}}
+.boil{animation:boilK .8s ease-in-out 1}
+
+/* ================================
+   圖鑑彈窗（手機優先 + 桌面適配）
+   ================================ */
+.modal{position:fixed; inset:0; z-index:50; display:block}
+.modal[hidden]{display:none}
+.modal__backdrop{
+  position:absolute; inset:0; cursor:pointer;
+  background: radial-gradient(80% 60% at 50% 40%, rgba(255,235,238,.6), rgba(0,0,0,.35));
+  backdrop-filter: blur(4px) saturate(1.05);
+}
+.modal__panel{
+  position:relative; margin:6vh auto 0;
+  width:95vw; max-width:600px; max-height:85vh; overflow-y:auto;
+  background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
+  border: 1px solid rgba(0,0,0,.06); border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.25);
+  padding: 16px; line-height:1.5;
+}
+.modal__head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px}
+.modal__head h3{margin:0; font-size:1.25rem}
+.modal__tools{display:flex; flex-direction:column; gap:10px; margin:10px 0}
 .modal__tools input[type="search"]{
-  flex:1; padding:10px 12px 10px 36px; border:1px solid #e5e7eb; border-radius:12px; background:#fff;
+  flex:1; font-size:1rem; padding:10px 12px 10px 36px; border:1px solid var(--border); border-radius:10px; background:#fff;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
   background-repeat:no-repeat; background-position:10px 50%;
   outline:none; transition:border-color .15s ease, box-shadow .15s ease
 }
 .modal__tools input[type="search"]:focus{ border-color:#e09aa0; box-shadow:0 0 0 4px rgba(201,70,85,.15) }
 
-/* 列表布局：手機一欄、桌機兩欄 */
-.dex-list{display:grid; grid-template-columns:1fr; gap:10px; max-height:65vh; overflow:auto; padding-right:4px}
-@media (min-width: 720px){ .dex-list{ grid-template-columns:1fr 1fr } }
-
-/* 卡片：輕浮起效果 */
-.dex-card{
-  border:1px solid #f1e9eb; border-radius:14px; padding:12px;
-  background: linear-gradient(180deg, #fff, #fdf7f7);
-  transition: transform .12s ease, box-shadow .12s ease
+/* 列表：手機單欄，桌面雙/三欄 */
+.dex-list{
+  display:grid; grid-template-columns:1fr; gap:12px; padding-right:4px;
 }
-.dex-card:hover{ transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.08) }
+@media (min-width: 720px){
+  .modal__panel{ max-width:900px }
+  .dex-list{ grid-template-columns:1fr 1fr }
+}
+@media (min-width: 1280px){
+  .modal__panel{ max-width:1100px }
+  .dex-list{ grid-template-columns:1fr 1fr 1fr }
+}
 
-/* 標題與副訊息 */
-.dex-title{margin:0 0 8px; font-weight:700; color:#222}
-.dex-title .muted{color:#6b7280; font-weight:500}
-
-/* 材料籤片 */
+/* 卡片 */
+.dex-card{
+  border:1px solid #f1e9eb; border-radius:12px; padding:14px; background:#fff;
+  box-shadow:0 3px 6px rgba(0,0,0,.08); transition: transform .1s ease, box-shadow .1s ease
+}
+.dex-card:hover{ transform:translateY(-2px); box-shadow:0 5px 10px rgba(0,0,0,.12) }
+.dex-title{margin:0 0 8px; font-weight:700; color:var(--text); font-size:1.05rem}
+.dex-title .muted{color:var(--muted); font-weight:500}
 .dex-mats{display:flex; flex-wrap:wrap; gap:6px}
 .dex-chip{
   display:inline-flex; align-items:center; gap:6px;
-  padding:4px 10px; font-size:.95em;
-  border:1px solid #eee; border-radius:999px; background:#fff;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.6)
+  padding:6px 10px; font-size:.95rem;
+  border:1px solid #eee; border-radius:999px; background:#f8f8f8;
 }
 
-/* 藥材敘述（來自 .effects） */
-.herb .effects{display:block; color:#6b7280; font-size:.9em; margin-left:26px; margin-top:2px}
+/* 未解鎖卡片 */
+.dex-card--locked{
+  opacity:.65; border-style:dashed; text-align:center; background:#fafafa; font-size:.95rem;
+}
 
-/* 捲軸微美化（僅支援 WebKit/Chromium） */
-.dex-list::-webkit-scrollbar{ width:10px; height:10px }
-.dex-list::-webkit-scrollbar-thumb{ background:#e5dee0; border-radius:10px }
-.dex-list::-webkit-scrollbar-thumb:hover{ background:#d8c9cc }
+/* 捲軸美化 */
+.dex-list::-webkit-scrollbar{ width:6px; height:6px }
+.dex-list::-webkit-scrollbar-thumb{ background:#ddd; border-radius:3px }
 
-/* —— 可選：暗色模式 —— */
+/* ================================
+   暗色模式（可選）
+   ================================ */
 @media (prefers-color-scheme: dark){
+  :root{ --bg:#16171a; --card:#1f2126; --text:#eae9ea; --muted:#9aa0a6; --border:#2c2f35 }
+  .topbar{ background:rgba(25,26,30,.8); border-color:var(--border) }
+  .status{ background:#1f2126; border-color:var(--border) }
+  .status.ok{ background:#12231a; border-color:#1e3c28; color:#cfead9 }
+  .status.bad{ background:#2b1719; border-color:#5a2a30; color:#ffd8dc }
+  .herb{ background:var(--card); border-color:var(--border) }
+  .card{ background:var(--card); border-color:var(--border) }
+  .actions .ghost{ background:var(--card); border-color:var(--border) }
+
   .modal__backdrop{ background: radial-gradient(80% 60% at 50% 40%, rgba(32,28,30,.6), rgba(0,0,0,.55)) }
   .modal__panel{ background: rgba(24,26,30,.86); border-color: rgba(255,255,255,.06) }
   .btn-sm{ background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); color:#eae9ea }
@@ -97,4 +173,13 @@
   .dex-card{ background: linear-gradient(180deg, rgba(34,36,40,.96), rgba(28,30,34,.96)); border-color: rgba(255,255,255,.08) }
   .dex-title{ color:#f5f5f5 }
   .dex-chip{ background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); color:#eae9ea }
+}
+
+/* ================================
+   迷你螢幕（≤400px）
+   ================================ */
+@media (max-width: 400px){
+  .modal__panel { padding:12px }
+  .btn-sm{ font-size:.9rem; padding:6px 10px }
+  .dex-chip{ font-size:.85rem; padding:4px 8px }
 }
