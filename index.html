@@ -3,82 +3,66 @@
 <head>
   <meta charset="UTF-8" />
   <title>煉藥模擬器</title>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js"></script>
-
-  <!-- 自訂檔案 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
-  <script defer src="scripts.js"></script>
-
-  <!-- Firebase 初始化 -->
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBEgS2lZYqSrr1FV5X0EzfrRQq_C4D1-Tc",
-      authDomain: "alchemygame-37ea5.firebaseapp.com",
-      projectId: "alchemygame-37ea5",
-      storageBucket: "alchemygame-37ea5.appspot.com",
-      messagingSenderId: "149160496683",
-      appId: "1:149160496683:web:2ef9826985a4bd3f1c646e",
-      measurementId: "G-59PLBST54N"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-  </script>
+  <script type="module" src="scripts.js"></script>
 </head>
 <body>
-  <!-- 登入連結 -->
-  <div id="login-link">
-    <a href="auth/login.html">🔐 登入</a>
-  </div>
+  <header class="topbar">
+    <h1>🔥 煉藥模擬器</h1>
 
-  <h1>🔥 煉藥模擬器</h1>
+    <div class="audio-panel">
+      <div class="vol-group">
+        <span>🎵 BGM</span>
+        <button id="bgmDown" class="btn-sm">−</button>
+        <input id="bgmVol" type="range" min="0" max="1" step="0.01" value="0.6" />
+        <button id="bgmUp" class="btn-sm">+</button>
+      </div>
+      <div class="vol-group">
+        <span>🔊 SFX</span>
+        <button id="sfxDown" class="btn-sm">−</button>
+        <input id="sfxVol" type="range" min="0" max="1" step="0.01" value="0.8" />
+        <button id="sfxUp" class="btn-sm">+</button>
+      </div>
+    </div>
+  </header>
 
-<section>
-  <h2>選擇藥材</h2>
-  <div id="herbContainer">
-    <!-- JS 會動態填入勾選框 -->
-  </div>
-</section>
+  <main>
+    <div id="status" class="status">正在連線 Firestore…</div>
 
-  
-  <!-- 藥材選擇 -->
-  <section>
-    <h3>🔍 選擇藥材：</h3>
-    <div id="herbList"></div>
-  </section>
+    <section>
+      <h2>選擇藥材（來自 Firestore /herbs）</h2>
+      <div id="herbContainer" class="grid"></div>
+    </section>
 
-  <!-- 火候選擇 -->
-  <section>
-    <h3>🔥 火候選擇：</h3>
-    <select id="fireType">
-      <option>小火</option>
-      <option>中火</option>
-      <option>大火</option>
-      <option>免用火</option>
-    </select>
-  </section>
+    <section>
+      <h2>選擇火候</h2>
+      <div id="fireType">
+        <label><input type="radio" name="fire" value="小火"> 小火</label>
+        <label><input type="radio" name="fire" value="中火"> 中火</label>
+        <label><input type="radio" name="fire" value="大火"> 大火</label>
+        <label><input type="radio" name="fire" value="免用火"> 免用火</label>
+      </div>
+    </section>
 
-  <!-- 操作按鈕 -->
-  <button onclick="simulateAlchemy()">開始煉藥</button>
+    <section class="actions">
+      <button id="brewBtn">🧪 開始煉藥</button>
+      <button id="resetBtn" class="ghost">↺ 重置</button>
+    </section>
 
-  <!-- 結果顯示 -->
-  <h3>📦 煉藥結果：</h3>
-  <div id="result"></div>
+    <section>
+      <h2>結果</h2>
+      <div id="result" class="card">尚未開始</div>
+    </section>
 
-  <!-- 鍋子圖片 -->
-  <img src="assets/images/cauldron.png" alt="煉藥鍋" id="cauldron" />
+    <img src="assets/images/cauldron.png" alt="煉藥鍋" id="cauldron" />
+  </main>
 
-  <!-- 音樂控制 -->
-  <div class="bgm-control">
-    <button id="toggleBGM">🎵 播放音樂</button>
-  </div>
-
-  <!-- 聲音效果 -->
-  <audio id="burnSound" src="assets/sounds/fire_crackling.mp3" preload="auto"></audio>
-  <audio id="bgm" src="assets/sounds/QunYing.mp3" preload="auto" loop></audio>
+  <!-- 音效（路徑請對齊你的專案）-->
+  <audio id="burnSound"   src="assets/sounds/fire.mp3" preload="auto" loop></audio>
+  <audio id="brewSound"   src="assets/sounds/brew.mp3" preload="auto"></audio>
+  <audio id="successSfx"  src="assets/sounds/success.mp3" preload="auto"></audio>
+  <audio id="failSfx"     src="assets/sounds/fail.mp3" preload="auto"></audio>
+  <audio id="bgm"         src="assets/sounds/QunYing.mp3" preload="auto" loop></audio>
 </body>
 </html>
-
