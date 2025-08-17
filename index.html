@@ -4,16 +4,20 @@
   <meta charset="UTF-8" />
   <title>煉藥模擬器</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preload" href="assets/sounds/QunYing.mp3" as="audio" type="audio/mpeg" />
   <link rel="stylesheet" href="style.css" />
   <script type="module" src="scripts.js"></script>
 </head>
 <body>
   <header class="topbar">
     <h1>🔥 煉藥模擬器</h1>
+
     <div class="audio-panel">
       <div class="vol-group">
-        <span>🎵 BGM</span>
-        <input id="bgmVol" type="range" min="0" max="1" step="0.01" value="0.6" />
+        <button id="bgmToggle" class="btn-sm" aria-label="播放/暫停 BGM">🎵 播放</button>
+        <label>音量
+          <input id="bgmVol" type="range" min="0" max="1" step="0.01" value="0.6" />
+        </label>
       </div>
       <div class="vol-group">
         <span>🔊 SFX</span>
@@ -53,13 +57,9 @@
     <img src="assets/images/cauldron.png" alt="煉藥鍋" id="cauldron" />
   </main>
 
-  <!-- 聲音資源（路徑依你的專案調整） -->
+  <!-- 音效資源 -->
+  <audio id="bgm"         src="assets/sounds/QunYing.mp3" preload="auto" loop playsinline></audio>
   <audio id="burnSound"   src="assets/sounds/fire.mp3" preload="auto" loop></audio>
-  <audio id="bgm"         src="assets/sounds/QunYing.mp3" preload="auto" loop></audio>
-<audio id="bgm" src="assets/sounds/QunYing.mp3" preload="auto" loop playsinline></audio>
-<button id="bgmToggle">🎵 播放/暫停</button>
 
-  
 </body>
 </html>
-
