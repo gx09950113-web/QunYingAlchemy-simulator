@@ -1,116 +1,205 @@
-// scripts/scripts.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js";
+// 純煉藥模擬器（依附件 recipes 結構）
+// 規則：
+// 1) 可勾選任意藥材
+// 2) 配方或火候不符 → 一鍋糊糊
+// 3) 配方與火候都正確 → 良率隨機 30%~99%
+// 4) herbs 來源：優先讀 /herbs（若不存在或為空，則以 /recipes 的 materials 聯集當清單）
 
-// ✅ 初始化 Firebase
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import {
+  getFirestore, collection, getDocs, query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+// 你提供的 config
 const firebaseConfig = {
   apiKey: "AIzaSyBEgS2lZYqSrr1FV5X0EzfrRQq_C4D1-Tc",
   authDomain: "alchemygame-37ea5.firebaseapp.com",
   projectId: "alchemygame-37ea5",
-  storageBucket: "alchemygame-37ea5.appspot.com",
+  storageBucket: "alchemygame-37ea5.firebasestorage.app",
   messagingSenderId: "149160496683",
   appId: "1:149160496683:web:2ef9826985a4bd3f1c646e",
   measurementId: "G-59PLBST54N"
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db  = getFirestore(app);
 
-let recipes = [];
+// DOM
+const statusEl   = document.getElementById("status");
+const herbBox    = document.getElementById("herbContainer");
+const resultEl   = document.getElementById("result");
+const cauldron   = document.getElementById("cauldron");
+const brewBtn    = document.getElementById("brewBtn");
+const resetBtn   = document.getElementById("resetBtn");
 
-// ✅ 動態載入藥材資料
-async function loadHerbs() {
-  const herbContainer = document.getElementById('herbContainer');
-  if (!herbContainer) return;
+// 音效
+const burnSound  = document.getElementById("burnSound");
+const brewSound  = document.getElementById("brewSound");
+const successSfx = document.getElementById("successSfx");
+const failSfx    = document.getElementById("failSfx");
+const bgm        = document.getElementById("bgm");
 
-  try {
-    const snapshot = await getDocs(collection(db, "herbs"));
+const bgmVol = document.getElementById("bgmVol");
+const sfxVol = document.getElementById("sfxVol");
 
-    if (snapshot.empty) {
-      herbContainer.innerHTML = "<p>目前尚無可用藥材。</p>";
-      return;
-    }
+// 狀態
+let HERB_LIST = [];    // string[]
+let RECIPES   = [];    // {name, materials[], fire, type}
 
-    snapshot.forEach((doc) => {
-      const herb = doc.data();
+// 工具
+const asSetEq = (a,b) => {
+  const A = new Set(a), B = new Set(b);
+  if (A.size !== B.size) return false;
+  for (const x of A) if (!B.has(x)) return false;
+  return true;
+};
+const randInt = (min,max)=> Math.floor(Math.random()*(max-min+1))+min;
+const randYieldPercent = ()=> randInt(30,99); // 30~99%
 
-      const label = document.createElement("label");
-      label.style.display = "inline-block";
-      label.style.marginRight = "10px";
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.name = "herbs";
-      checkbox.value = herb.name;
-
-      label.appendChild(checkbox);
-      label.appendChild(document.createTextNode(" " + herb.name));
-      herbContainer.appendChild(label);
-    });
-  } catch (error) {
-    console.error("載入藥材失敗：", error);
-    herbContainer.innerHTML = "<p>載入藥材失敗。</p>";
+// UI
+function renderHerbs(names){
+  herbBox.innerHTML = "";
+  if (!names?.length){
+    herbBox.innerHTML = `<div class="hint">（沒有可選藥材）請確認 /herbs 或 /recipes 存在資料</div>`;
+    return;
   }
-}
-
-// ✅ 載入配方資料
-async function loadRecipes() {
-  try {
-    const snapshot = await getDocs(collection(db, "recipes"));
-    recipes = snapshot.docs.map(doc => doc.data());
-  } catch (error) {
-    console.error("載入配方失敗：", error);
-  }
-}
-
-// ✅ 模擬煉藥
-window.simulateAlchemy = function () {
-  const selectedHerbs = Array.from(document.querySelectorAll('input[name="herbs"]:checked')).map(el => el.value);
-  const fireType = document.getElementById('fireType').value;
-  const resultDiv = document.getElementById('result');
-  const burnSound = document.getElementById('burnSound');
-
-  let resultText = "";
-
-  burnSound.currentTime = 0;
-  burnSound.play();
-
-  // 比對配方
-  const matchedRecipe = recipes.find(recipe => {
-    const requiredHerbs = recipe.ingredients.sort().join(',');
-    const selectedKey = selectedHerbs.sort().join(',');
-    return recipe.fire === fireType && selectedKey === requiredHerbs;
+  names.forEach(n=>{
+    const label = document.createElement("label");
+    label.className = "herb";
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.name="herbs"; cb.value=n;
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(" "+n));
+    herbBox.appendChild(label);
   });
-
-  if (matchedRecipe) {
-    const successRate = Math.floor(Math.random() * 70) + 30; // 30~99%
-    if (successRate >= 50) {
-      resultText = `✅ 煉製成功！獲得【${matchedRecipe.name}】（成功率 ${successRate}%）`;
-    } else {
-      resultText = `❌ 火候失當，煉製【${matchedRecipe.name}】失敗！（成功率 ${successRate}%）`;
-    }
-  } else {
-    resultText = `❌ 無效配方！煉出一鍋黑色糊糊……`;
-  }
-
-  resultDiv.innerText = resultText;
+}
+const getSelectedHerbs = ()=> Array.from(document.querySelectorAll('input[name="herbs"]:checked')).map(x=>x.value);
+const getFireType = ()=> {
+  const r = document.querySelector('input[name="fire"]:checked');
+  return r ? r.value : null;
 };
 
-// ✅ 控制 BGM
-window.addEventListener("DOMContentLoaded", async () => {
-  await loadHerbs();
-  await loadRecipes();
+function animateCauldron(){
+  cauldron.classList.add("boil");
+  setTimeout(()=> cauldron.classList.remove("boil"), 900);
+}
+function play(el, vol){
+  try{ el.volume = vol; el.currentTime=0; el.play().catch(()=>{});}catch{}
+}
 
-  const bgm = document.getElementById('bgm');
-  const toggleBGMButton = document.getElementById('toggleBGM');
-
-  toggleBGMButton.addEventListener("click", () => {
-    if (bgm.paused) {
-      bgm.play();
-      toggleBGMButton.innerText = "⏸️ 暫停音樂";
-    } else {
-      bgm.pause();
-      toggleBGMButton.innerText = "🎵 播放音樂";
-    }
+// Firestore
+async function loadHerbs(){
+  try{
+    const col = collection(db, "herbs");
+    const q = query(col, orderBy("name"));
+    const snap = await getDocs(q);
+    const list = [];
+    snap.forEach(doc=>{
+      const d = doc.data()||{};
+      const name = d.name || doc.id;
+      const enabled = d.enabled ?? true;
+      if (name && enabled) list.push(name);
+    });
+    return list;
+  }catch{ return []; }
+}
+async function loadRecipes(){
+  const snap = await getDocs(collection(db, "recipes"));
+  const list = [];
+  snap.forEach(doc=>{
+    const d = doc.data()||{};
+    // 依附件欄位：name, materials[], fire, type
+    if (!Array.isArray(d.materials)) d.materials = [];
+    list.push({
+      name: d.name || doc.id,
+      materials: d.materials,
+      fire: d.fire || "中火",
+      type: d.type || ""
+    });
   });
+  return list;
+}
+
+function unionMaterials(recipes){
+  const s = new Set();
+  for (const r of recipes) for (const m of (r.materials||[])) s.add(m);
+  return Array.from(s).sort((a,b)=> a.localeCompare(b,'zh-Hant-u-co-stroke'));
+}
+
+// 主流程
+function brewOnce(){
+  const chosen = getSelectedHerbs();
+  const fire   = getFireType();
+
+  if (!fire){ resultEl.innerHTML = `<p>⚠️ 請先選擇火候。</p>`; return; }
+  if (!chosen.length){ resultEl.innerHTML = `<p>⚠️ 請至少選擇一味藥材。</p>`; return; }
+
+  // 免用火則不放燃燒音；其餘播放
+  if (fire === "免用火"){ try{ burnSound.pause(); burnSound.currentTime=0; }catch{} }
+  else { play(burnSound, 0.6); }
+
+  animateCauldron(); play(brewSound, Number(sfxVol.value));
+
+  // 比對：有無 recipe 火候完全相同且 materials 集合等於所選（順序無關）
+  const matched = RECIPES.find(r => r.fire === fire && asSetEq(r.materials, chosen));
+
+  if (!matched){
+    resultEl.innerHTML = `
+      <p>❌ 你煉出了一鍋 <strong>黑不溜丟的糊糊</strong>。</p>
+      <p class="muted">（提示：需同時符合配方 <em>materials</em> 與火候 <em>fire</em>，順序不影響）</p>
+    `;
+    play(failSfx, Number(sfxVol.value));
+    return;
+  }
+
+  const yieldPct = randYieldPercent();
+  resultEl.innerHTML = `
+    <p>✅ 成功煉成：<strong>${matched.name}</strong>（${matched.type || "劑型未註"}）</p>
+    <p>本次良率：<strong>${yieldPct}%</strong></p>
+    <p class="muted">（配方/火候嚴格匹配，但良率僅落在 30%~99%）</p>
+  `;
+  play(successSfx, Number(sfxVol.value));
+}
+
+// 綁定
+brewBtn.addEventListener("click", brewOnce);
+resetBtn.addEventListener("click", ()=>{
+  document.querySelectorAll('input[name="herbs"]').forEach(cb=> cb.checked=false);
+  document.querySelectorAll('input[name="fire"]').forEach(r=> r.checked=false);
+  resultEl.textContent = "尚未開始";
+  try{ burnSound.pause(); burnSound.currentTime=0; }catch{}
 });
+
+// 音量
+bgmVol.addEventListener("input", ()=> bgm.volume = Number(bgmVol.value));
+sfxVol.addEventListener("input", ()=>{
+  const v = Number(sfxVol.value);
+  brewSound.volume = successSfx.volume = failSfx.volume = v;
+});
+
+// 啟動
+(async function init(){
+  try{
+    statusEl.textContent = "讀取資料中（herbs / recipes）…";
+    const [recipes, herbsFromCol] = await Promise.all([loadRecipes(), loadHerbs()]);
+    RECIPES = recipes;
+
+    // 藥材來源優先 /herbs；若無則用 recipes.materials 聯集
+    const herbs = herbsFromCol.length ? herbsFromCol : unionMaterials(RECIPES);
+    HERB_LIST = herbs;
+    renderHerbs(HERB_LIST);
+
+    // 預設音量
+    bgm.volume = Number(bgmVol.value);
+    const v = Number(sfxVol.value);
+    brewSound.volume = successSfx.volume = failSfx.volume = v;
+
+    statusEl.textContent = `已載入：配方 ${RECIPES.length} 筆、藥材 ${HERB_LIST.length} 筆。`;
+    statusEl.classList.add("ok");
+  }catch(e){
+    console.error(e);
+    statusEl.textContent = "❌ Firestore 連線或載入失敗，請檢查設定或權限。";
+    statusEl.classList.add("bad");
+    renderHerbs([]);
+  }
+})();
