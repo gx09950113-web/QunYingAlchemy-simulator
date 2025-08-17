@@ -151,29 +151,33 @@ h2{font-size:1.05rem; margin:18px 0 8px}
 .dex-list::-webkit-scrollbar-thumb{ background:#ddd; border-radius:3px }
 
 /* ================================
-   暗色模式（可選）
+   暗色模式（由 html.dark 觸發）
    ================================ */
-@media (prefers-color-scheme: dark){
-  :root{ --bg:#16171a; --card:#1f2126; --text:#eae9ea; --muted:#9aa0a6; --border:#2c2f35 }
-  .topbar{ background:rgba(25,26,30,.8); border-color:var(--border) }
-  .status{ background:#1f2126; border-color:var(--border) }
-  .status.ok{ background:#12231a; border-color:#1e3c28; color:#cfead9 }
-  .status.bad{ background:#2b1719; border-color:#5a2a30; color:#ffd8dc }
-  .herb{ background:var(--card); border-color:var(--border) }
-  .card{ background:var(--card); border-color:var(--border) }
-  .actions .ghost{ background:var(--card); border-color:var(--border) }
-
-  .modal__backdrop{ background: radial-gradient(80% 60% at 50% 40%, rgba(32,28,30,.6), rgba(0,0,0,.55)) }
-  .modal__panel{ background: rgba(24,26,30,.86); border-color: rgba(255,255,255,.06) }
-  .btn-sm{ background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); color:#eae9ea }
-  .modal__tools input[type="search"]{
-    background-color: rgba(255,255,255,.06); border-color: rgba(255,255,255,.14); color:#eae9ea
-  }
-  .modal__tools input[type="search"]::placeholder{ color:#9aa0a6 }
-  .dex-card{ background: linear-gradient(180deg, rgba(34,36,40,.96), rgba(28,30,34,.96)); border-color: rgba(255,255,255,.08) }
-  .dex-title{ color:#f5f5f5 }
-  .dex-chip{ background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); color:#eae9ea }
+html.dark {
+  --bg:#16171a;
+  --card:#1f2126;
+  --text:#eae9ea;
+  --muted:#9aa0a6;
+  --border:#2c2f35;
 }
+html.dark .topbar{ background:rgba(25,26,30,.8); border-color:var(--border) }
+html.dark .status{ background:#1f2126; border-color:var(--border) }
+html.dark .status.ok{ background:#12231a; border-color:#1e3c28; color:#cfead9 }
+html.dark .status.bad{ background:#2b1719; border-color:#5a2a30; color:#ffd8dc }
+html.dark .herb{ background:var(--card); border-color:var(--border) }
+html.dark .card{ background:var(--card); border-color:var(--border) }
+html.dark .actions .ghost{ background:var(--card); border-color:var(--border) }
+
+html.dark .modal__backdrop{ background: radial-gradient(80% 60% at 50% 40%, rgba(32,28,30,.6), rgba(0,0,0,.55)) }
+html.dark .modal__panel{ background: rgba(24,26,30,.86); border-color: rgba(255,255,255,.06) }
+html.dark .btn-sm{ background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); color:#eae9ea }
+html.dark .modal__tools input[type="search"]{
+  background-color: rgba(255,255,255,.06); border-color: rgba(255,255,255,.14); color:#eae9ea
+}
+html.dark .modal__tools input[type="search"]::placeholder{ color:#9aa0a6 }
+html.dark .dex-card{ background: linear-gradient(180deg, rgba(34,36,40,.96), rgba(28,30,34,.96)); border-color: rgba(255,255,255,.08) }
+html.dark .dex-title{ color:#f5f5f5 }
+html.dark .dex-chip{ background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); color:#eae9ea }
 
 /* ================================
    迷你螢幕（≤400px）
