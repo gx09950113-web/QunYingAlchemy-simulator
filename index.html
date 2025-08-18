@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>煉藥模擬器</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- 預載常用音效 -->
   <link rel="preload" href="assets/sounds/QunYing.mp3" as="audio" type="audio/mpeg" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -24,7 +23,6 @@
         <input id="sfxVol" type="range" min="0" max="1" step="0.01" value="0.8" />
       </div>
 
-      <!-- 圖鑑＋主題切換 -->
       <button id="dexBtn" class="btn-sm">📘 圖鑑</button>
       <button id="themeToggle" class="btn-sm">🌙 暗色模式</button>
     </div>
@@ -35,7 +33,15 @@
 
     <section>
       <h2>選擇藥材（可任意數量）</h2>
-      <div id="herbContainer" class="grid"></div>
+
+      <!-- 新增：全局展開/摺疊 -->
+      <div class="group-toolbar">
+        <button id="expandAll" class="btn-sm">▼ 展開全部</button>
+        <button id="collapseAll" class="btn-sm">▲ 摺疊全部</button>
+      </div>
+
+      <!-- 新增：分區容器（折疊群組會渲染在這裡） -->
+      <div id="herbContainer" class="groups"></div>
     </section>
 
     <section>
@@ -64,6 +70,9 @@
   <!-- 音效資源 -->
   <audio id="bgm"         src="assets/sounds/QunYing.mp3" preload="auto" loop playsinline></audio>
   <audio id="burnSound"   src="assets/sounds/fire.mp3" preload="auto" loop></audio>
+  <audio id="brewSound"   src="assets/sounds/brew.mp3" preload="auto"></audio>
+  <audio id="successSfx"  src="assets/sounds/success.mp3" preload="auto"></audio>
+  <audio id="failSfx"     src="assets/sounds/fail.mp3" preload="auto"></audio>
 
   <!-- 圖鑑彈窗 -->
   <div id="dexModal" class="modal" hidden>
@@ -76,7 +85,7 @@
 
       <div class="modal__tools">
         <input id="dexSearch" type="search" placeholder="搜尋配方或材料…" />
-        <!-- JS 會在這裡動態插入：顯示未解鎖開關 & 進度 -->
+        <!-- 這裡會由 JS 動態插入：顯示未解鎖開關 & 進度 -->
       </div>
 
       <div id="dexList" class="dex-list"></div>
