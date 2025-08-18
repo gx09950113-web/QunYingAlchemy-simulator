@@ -51,11 +51,12 @@ h2{font-size:1.05rem; margin:18px 0 8px}
 .status.bad{border-style:solid; color:#7a1e24; background:#fff1f2; border-color:#f5c2c7}
 .hint{color:var(--muted); font-size:.95rem}
 
-/* 藥材網格 */
+/* 舊的 .grid（已被每組 .group__grid 取代，但保留給其他區塊） */
 .grid{
   display:grid; grid-template-columns:1fr 1fr; gap:8px;
 }
 @media (min-width: 680px){ .grid{ grid-template-columns:1fr 1fr 1fr } }
+
 .herb{
   display:block; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:var(--card);
   box-shadow:0 1px 2px rgba(0,0,0,.03)
@@ -83,6 +84,38 @@ h2{font-size:1.05rem; margin:18px 0 8px}
 #cauldron{display:block; width:min(220px, 40vw); margin:16px auto}
 @keyframes boilK {0%{transform:translateY(0)} 50%{transform:translateY(-3px)} 100%{transform:translateY(0)}}
 .boil{animation:boilK .8s ease-in-out 1}
+
+/* ================================
+   分區折疊（選藥材）
+   ================================ */
+.group-toolbar{ display:flex; gap:8px; margin:6px 0 10px; flex-wrap:wrap }
+.groups{ display:flex; flex-direction:column; gap:10px }
+
+.group{ border:1px solid var(--border); border-radius:12px; background:var(--card); overflow:hidden }
+.group[open] .group__summary{ border-bottom:1px solid var(--border) }
+
+.group__summary{
+  list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px;
+  padding:10px 12px; background:rgba(0,0,0,0.02);
+}
+.group__summary::-webkit-details-marker{ display:none }
+.group__title{ font-weight:700 }
+.group__count{ color:var(--muted) }
+.group__summary .spacer{ flex:1 }
+
+.btn-line{
+  background:#fff; border:1px solid var(--border); box-shadow:none; padding:6px 10px; border-radius:8px;
+}
+.btn-line:hover{ transform:none; box-shadow:0 2px 6px rgba(0,0,0,.06) }
+
+/* 組內網格 */
+.group__grid{
+  display:grid; gap:8px; padding:10px 12px;
+  grid-template-columns: 1fr 1fr;
+}
+@media (min-width: 680px){
+  .group__grid{ grid-template-columns: 1fr 1fr 1fr; }
+}
 
 /* ================================
    圖鑑彈窗（手機優先 + 桌面適配）
@@ -167,6 +200,8 @@ html.dark .status.bad{ background:#2b1719; border-color:#5a2a30; color:#ffd8dc }
 html.dark .herb{ background:var(--card); border-color:var(--border) }
 html.dark .card{ background:var(--card); border-color:var(--border) }
 html.dark .actions .ghost{ background:var(--card); border-color:var(--border) }
+
+html.dark .group__summary{ background: rgba(255,255,255,.04) }
 
 html.dark .modal__backdrop{ background: radial-gradient(80% 60% at 50% 40%, rgba(32,28,30,.6), rgba(0,0,0,.55)) }
 html.dark .modal__panel{ background: rgba(24,26,30,.86); border-color: rgba(255,255,255,.06) }
