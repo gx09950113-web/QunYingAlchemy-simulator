@@ -1,9 +1,5 @@
 // ==============================
-// 煉藥模擬器 scripts.js（本地 JSON + 圖鑑解鎖 + 主題切換）
-// - 讀取：data/herbs.json、data/recipes.json
-// - herbs 支援：["名稱", ...] 或 [{name, emoji?, effects?}, ...]
-// - 圖鑑：須煉成後才解鎖（localStorage 持久化）
-// - 音量與播放控制、手機/桌面適配 UI、搜尋與顯示未解鎖
+// 煉藥模擬器 scripts.js（本地 JSON + 圖鑑解鎖 + 主題切換 + emoji 分區折疊）
 // ==============================
 
 const HERBS_URL   = "data/herbs.json";
@@ -15,7 +11,7 @@ const THEME_KEY   = "theme";
 let statusEl, herbBox, resultEl, cauldron, brewBtn, resetBtn;
 let bgm, bgmToggle, bgmVol, sfxVol, burnSound, brewSound, successSfx, failSfx;
 let dexBtn, dexModal, dexClose, dexSearch, dexList, dexTools, dexShowLocked, dexProgress;
-let themeToggle;
+let themeToggle, expandAllBtn, collapseAllBtn;
 
 // 狀態
 let HERB_LIST = [];        // string[] 或 {name, emoji?, effects?}[]
@@ -63,25 +59,58 @@ function loadDiscovered() {
     return new Set(Array.isArray(arr) ? arr : []);
   } catch { return new Set(); }
 }
-function saveDiscovered() {
-  try { localStorage.setItem(DEX_KEY, JSON.stringify(Array.from(DISCOVERED))); } catch {}
-}
+function saveDiscovered() { try { localStorage.setItem(DEX_KEY, JSON.stringify(Array.from(DISCOVERED))); } catch {} }
 function unlockRecipe(name) {
   if (!name || DISCOVERED.has(name)) return;
   if (!RECIPES.some(r => r.name === name)) return; // 只收錄存在於當前配方的名稱
-  DISCOVERED.add(name);
-  saveDiscovered();
+  DISCOVERED.add(name); saveDiscovered();
   if (dexModal && !dexModal.hidden) renderDexUI();
 }
 
-// ===== UI：藥材渲染 =====
-function renderHerbs(list) {
-  herbBox.innerHTML = "";
-  if (!list?.length) {
-    herbBox.innerHTML = `<div class="hint">（沒有可選藥材）請確認 /data/herbs.json 或 /data/recipes.json</div>`;
-    return;
-  }
+// ====== 按 emoji 分群 + 折疊渲染 ======
+function groupHerbsByEmoji(list) {
+  const groups = new Map(); // "🌿" -> item[]
   list.forEach(item => {
+    const isStr  = typeof item === "string";
+    const emoji  = isStr ? "❓" : (item.emoji || "❓");
+    if (!groups.has(emoji)) groups.set(emoji, []);
+    groups.get(emoji).push(item);
+  });
+  for (const [k, arr] of groups) {
+    arr.sort((a,b) => {
+      const an = typeof a === "string" ? a : a.name;
+      const bn = typeof b === "string" ? b : b.name;
+      return byStroke(an, bn);
+    });
+  }
+  // 讓常見 emoji 先排前面
+  const emojiOrder = ["🌿","💠","🌹","🌼","🍯","💧","🫗","❓"];
+  return new Map(Array.from(groups.entries()).sort((a,b) => {
+    const ia = emojiOrder.indexOf(a[0]); const ib = emojiOrder.indexOf(b[0]);
+    if (ia === -1 && ib === -1) return a[0].localeCompare(b[0]);
+    if (ia === -1) return 1; if (ib === -1) return -1; return ia - ib;
+  }));
+}
+
+function renderHerbGroupSection(emoji, items) {
+  const details = document.createElement("details");
+  details.className = "group";
+  details.open = false; // 預設摺疊
+
+  const summary = document.createElement("summary");
+  summary.className = "group__summary";
+  summary.innerHTML = `
+    <span class="group__title">${emoji}</span>
+    <span class="group__count">（${items.length}）</span>
+    <span class="spacer"></span>
+    <button type="button" class="btn-sm btn-line selectAll">全選</button>
+    <button type="button" class="btn-sm btn-line clearAll">全不選</button>
+  `;
+
+  const grid = document.createElement("div");
+  grid.className = "group__grid";
+
+  items.forEach(item => {
     const isStr = typeof item === "string";
     const name    = isStr ? item : item.name;
     const emoji   = isStr ? ""   : (item.emoji || "");
@@ -101,9 +130,38 @@ function renderHerbs(list) {
       small.textContent = " " + effects;
       label.appendChild(small);
     }
-    herbBox.appendChild(label);
+    grid.appendChild(label);
+  });
+
+  // 本組全選/全不選
+  summary.querySelector(".selectAll").addEventListener("click", (e) => {
+    e.stopPropagation();
+    grid.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+  });
+  summary.querySelector(".clearAll").addEventListener("click", (e) => {
+    e.stopPropagation();
+    grid.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+  });
+
+  details.appendChild(summary);
+  details.appendChild(grid);
+  return details;
+}
+
+// 取代原本 renderHerbs()
+function renderHerbs(list) {
+  herbBox.innerHTML = "";
+  if (!list?.length) {
+    herbBox.innerHTML = `<div class="hint">（沒有可選藥材）請確認 /data/herbs.json 或 /data/recipes.json</div>`;
+    return;
+  }
+  const grouped = groupHerbsByEmoji(list);
+  grouped.forEach((items, emoji) => {
+    herbBox.appendChild(renderHerbGroupSection(emoji, items));
   });
 }
+
+// ===== UI：取得選擇 =====
 const getSelectedHerbs = () =>
   Array.from(document.querySelectorAll('input[name="herbs"]:checked')).map(x => x.value);
 const getFireType = () => {
@@ -127,7 +185,6 @@ function materialLabel(name) {
 }
 function ensureDexTools() {
   if (!dexTools) return;
-  // 顯示未解鎖 checkbox
   if (!dexShowLocked) {
     const wrap = document.createElement("label");
     wrap.style.display = "inline-flex";
@@ -143,7 +200,6 @@ function ensureDexTools() {
     dexShowLocked = cb;
     dexShowLocked.addEventListener("change", renderDexUI);
   }
-  // 進度顯示
   if (!dexProgress) {
     const span = document.createElement("span");
     span.id = "dexProgress";
@@ -197,7 +253,7 @@ function renderDexUI() {
   const { got, total } = calcProgress();
   if (dexProgress) dexProgress.textContent = `已解鎖 ${got} / ${total}`;
 }
-function renderDex() { renderDexUI(); } // 相容舊函式名
+function renderDex() { renderDexUI(); }
 
 // ===== 煉藥主流程 =====
 function brewOnce() {
@@ -296,7 +352,7 @@ async function boot() {
       提示：請用本地伺服器（Live Server / python -m http.server），確認 /data/*.json 路徑與 JSON 格式。`;
       statusEl.classList.add("bad");
     }
-    renderHerbs([]);
+    herbBox.innerHTML = "";
   }
 }
 
@@ -326,7 +382,9 @@ window.addEventListener("DOMContentLoaded", () => {
   dexList    = document.getElementById("dexList");
   dexTools   = document.querySelector(".modal__tools");
 
-  themeToggle = document.getElementById("themeToggle");
+  themeToggle    = document.getElementById("themeToggle");
+  expandAllBtn   = document.getElementById("expandAll");
+  collapseAllBtn = document.getElementById("collapseAll");
 
   // 圖鑑工具列元件
   ensureDexTools();
@@ -383,6 +441,14 @@ window.addEventListener("DOMContentLoaded", () => {
   themeToggle?.addEventListener("click", () => {
     const isDark = document.documentElement.classList.contains("dark");
     applyTheme(!isDark);
+  });
+
+  // 展開/摺疊全部
+  expandAllBtn?.addEventListener("click", () => {
+    document.querySelectorAll(".group").forEach(d => d.open = true);
+  });
+  collapseAllBtn?.addEventListener("click", () => {
+    document.querySelectorAll(".group").forEach(d => d.open = false);
   });
 
   // 啟動
